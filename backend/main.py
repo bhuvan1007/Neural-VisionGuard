@@ -32,59 +32,67 @@ def read_root():
 @app.websocket("/ws/stream")
 async def video_stream(websocket: WebSocket):
     await websocket.accept()
-    
-    # Normally this would be a local webcam (0) or IP camera RTSP link.
-    # For demo without hardware, we'll try standard webcam.
-    cap = cv2.VideoCapture(0)
-    
-    # If no webcam, you could optionally fall back to a dummy frame or video file.
+    print("WebSocket Connected!")
     
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret or frame is None:
-                # Fallback frame for headless hackathon demo
-                import numpy as np
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(frame, "NO CAMERA DETECTED - SIMULATING", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (200, 200, 200), 2)
+            # Receive base64 frame from the React frontend
+            payload = await websocket.receive_json()
+            
+            if payload.get("type") == "client_frame":
+                b64_data = payload.get("image")
                 
-            # Process Frame via YOLOv8
-            annotated_frame, hazards = detector.process_frame(frame)
-            
-            # Encode frame as JPEG to send over WebSocket
-            _, buffer = cv2.imencode('.jpg', annotated_frame)
-            jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-            
-            alerts_payload = []
-            
-            # If hazard, trigger Groq Authority Mapping
-            if hazards:
-                for hazard in hazards:
-                    timestamp_str = datetime.now().isoformat()
-                    # Trigger Groq AI
-                    mapping_result = await generate_alert(hazard["type"], hazard["severity"], timestamp_str)
-                    
-                    alerts_payload.append({
-                        "type": hazard["type"],
-                        "severity": hazard["severity"],
-                        "timestamp": timestamp_str,
-                        "description": mapping_result["message"],
-                        "authorityMapped": mapping_result["authority"]
-                    })
-            
-            # Broadcast frame and any alerts
-            payload = {
-                "type": "frame_update",
-                "image": f"data:image/jpeg;base64,{jpg_as_text}",
-                "alerts": alerts_payload
-            }
-            
-            await websocket.send_json(payload)
-            await asyncio.sleep(0.05) # control frame rate to ~20 FPS
+                # Strip the data URL prefix if present (e.g., 'data:image/jpeg;base64,')
+                if b64_data and ',' in b64_data:
+                    b64_data = b64_data.split(',')[1]
+                
+                # Decode base64 to numpy array
+                import numpy as np
+                try:
+                    img_data = base64.b64decode(b64_data)
+                    np_arr = np.frombuffer(img_data, np.uint8)
+                    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                except Exception as e:
+                    print(f"Error decoding base64 image: {e}")
+                    continue
+                
+                if frame is None:
+                    continue
+                
+                # Process Frame via YOLOv8
+                annotated_frame, hazards = detector.process_frame(frame)
+                
+                # Encode processed frame as JPEG
+                _, buffer = cv2.imencode('.jpg', annotated_frame)
+                jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+                
+                alerts_payload = []
+                
+                # If hazard, trigger Groq Authority Mapping
+                if hazards:
+                    for hazard in hazards:
+                        timestamp_str = datetime.now().isoformat()
+                        # Trigger Groq AI
+                        mapping_result = await generate_alert(hazard["type"], hazard["severity"], timestamp_str)
+                        
+                        alerts_payload.append({
+                            "type": hazard["type"],
+                            "severity": hazard["severity"],
+                            "timestamp": timestamp_str,
+                            "description": mapping_result["message"],
+                            "authorityMapped": mapping_result["authority"]
+                        })
+                
+                # Broadcast annotated frame and any alerts back to frontend
+                response_payload = {
+                    "type": "frame_update",
+                    "image": f"data:image/jpeg;base64,{jpg_as_text}",
+                    "alerts": alerts_payload
+                }
+                
+                await websocket.send_json(response_payload)
 
     except WebSocketDisconnect:
         print("Client disconnected from stream.")
     except Exception as e:
         print(f"WebSocket Error: {e}")
-    finally:
-        cap.release()
