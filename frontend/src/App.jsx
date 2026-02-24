@@ -193,8 +193,8 @@ function App() {
               <button
                 onClick={toggleCamera}
                 className={`flex items-center gap-1 lg:gap-2 px-3 py-1.5 rounded-full font-medium text-xs lg:text-sm transition-all shadow-lg ${isCameraActive
-                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 shadow-rose-500/10'
-                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 shadow-blue-500/10'
+                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 shadow-rose-500/10'
+                  : 'bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 shadow-blue-500/10'
                   }`}
               >
                 {isCameraActive ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
@@ -215,7 +215,7 @@ function App() {
       <main className="flex-1 p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6 content-start max-w-[1600px] mx-auto w-full">
         {/* Video Feed (Mobile: Top, Desktop: Top Right) */}
         <div className="order-1 lg:col-span-3 lg:col-start-2 lg:row-start-1 relative aspect-video bg-black rounded-2xl border border-gray-800 overflow-hidden shadow-2xl shadow-rose-900/10 flex flex-col justify-center">
-          <VideoFeed frameData={frameData} isConnected={isConnected} isCameraActive={isCameraActive} onStartCamera={toggleCamera} />
+          <VideoFeed frameData={frameData} isConnected={isConnected} isCameraActive={isCameraActive} onStartCamera={toggleCamera} videoRef={videoRef} />
         </div>
 
         {/* Stats Column (Mobile: Middle Grid, Desktop: Left Column span 2 rows) */}
