@@ -19,7 +19,8 @@ function App() {
 
   useEffect(() => {
     // Connect to FastAPI Backend WebSockets
-    ws.current = new WebSocket('ws://localhost:8000/ws/stream');
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/stream';
+    ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
       console.log('WebSocket Connected');

@@ -8,7 +8,7 @@ const VideoFeed = ({ frameData, isConnected }) => {
                 <EyeOff className="w-16 h-16 mb-4 text-gray-700" />
                 <p className="text-lg font-medium text-gray-300">Connection to Camera Lost</p>
                 <div className="mt-2 text-sm text-gray-500 flex items-center gap-2">
-                    Waiting for backend on ws://localhost:8000/ws/stream
+                    Waiting for backend connection...
                 </div>
             </div>
         );
